@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simonov Birthday</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #06040f;
+    --pink: #ff3cac;
+    --cyan: #00f5d4;
+    --yellow: #ffe600;
+    --purple: #7b2fff;
+    --white: #f0eeff;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow-x: hidden;
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* Noise overlay */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
+    pointer-events: none;
+    z-index: 9990;
+    opacity: 0.6;
+  }
+
+  /* Gradient bg blobs */
+  .blob {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.22;
+    pointer-events: none;
+    animation: floatBlob 12s ease-in-out infinite alternate;
+  }
+  .blob-1 { width: 520px; height: 520px; background: var(--purple); top: -120px; left: -100px; animation-delay: 0s; }
+  .blob-2 { width: 400px; height: 400px; background: var(--pink); bottom: -100px; right: -80px; animation-delay: -4s; }
+  .blob-3 { width: 300px; height: 300px; background: var(--cyan); top: 40%; left: 50%; animation-delay: -8s; }
+
+  @keyframes floatBlob {
+    from { transform: translate(0, 0) scale(1); }
+    to   { transform: translate(30px, 20px) scale(1.08); }
+  }
+
+  /* Canvas for particles */
+  #canvas { position: fixed; inset: 0; pointer-events: none; z-index: 1; }
+
+  /* Main layout */
+  main {
+    position: relative;
+    z-index: 10;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    gap: 32px;
+  }
+
+  /* Big label */
+  .label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(11px, 2.2vw, 14px);
+    letter-spacing: 0.35em;
+    color: var(--cyan);
+    text-transform: uppercase;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 0.3s;
+  }
+
+  /* Name */
+  .name-wrap {
+    text-align: center;
+    opacity: 0;
+    animation: fadeUp 0.9s ease forwards 0.5s;
+  }
+  .name-main {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(68px, 18vw, 160px);
+    line-height: 0.9;
+    background: linear-gradient(135deg, var(--pink) 0%, var(--yellow) 50%, var(--cyan) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 40px rgba(255,60,172,0.4));
+    letter-spacing: -0.02em;
+  }
+  .name-sub {
+    font-size: clamp(13px, 2.5vw, 16px);
+    font-weight: 300;
+    letter-spacing: 0.12em;
+    color: rgba(240,238,255,0.55);
+    margin-top: 6px;
+  }
+
+  /* Countdown */
+  #phase-countdown { width: 100%; max-width: 620px; opacity: 0; animation: fadeUp 1s ease forwards 0.8s; }
+  #phase-birthday  { width: 100%; max-width: 620px; display: none; opacity: 0; }
+
+  .countdown-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .cd-box {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 20px 8px 16px;
+    text-align: center;
+    backdrop-filter: blur(12px);
+    transition: border-color 0.3s;
+  }
+  .cd-box:hover { border-color: var(--pink); }
+  .cd-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(38px, 10vw, 72px);
+    line-height: 1;
+    background: linear-gradient(180deg, #fff 30%, var(--cyan) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .cd-lbl {
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: rgba(240,238,255,0.4);
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  /* Birthday message (shown when birthday arrives) */
+  .bday-msg {
+    text-align: center;
+  }
+  .bday-big {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(52px, 14vw, 120px);
+    line-height: 1;
+    background: linear-gradient(135deg, var(--yellow) 0%, var(--pink) 60%, var(--purple) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: pulse 1.5s ease-in-out infinite alternate;
+  }
+  @keyframes pulse {
+    from { filter: drop-shadow(0 0 20px rgba(255,230,0,0.5)); }
+    to   { filter: drop-shadow(0 0 60px rgba(255,60,172,0.7)); }
+  }
+  .bday-sub {
+    font-size: clamp(14px, 2.8vw, 18px);
+    font-weight: 300;
+    color: rgba(240,238,255,0.7);
+    margin-top: 14px;
+    line-height: 1.8;
+  }
+
+  /* Date badge */
+  .date-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,60,172,0.12);
+    border: 1px solid rgba(255,60,172,0.3);
+    border-radius: 999px;
+    padding: 8px 20px;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    color: var(--pink);
+    opacity: 0;
+    animation: fadeUp 1s ease forwards 1.1s;
+  }
+  .date-badge span { color: rgba(240,238,255,0.5); }
+
+  /* Footer */
+  footer {
+    position: fixed;
+    bottom: 20px;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: rgba(240,238,255,0.2);
+    text-transform: uppercase;
+    z-index: 10;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Confetti canvas (birthday mode) */
+  #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 2; display: none; }
+
+  /* SVG icons */
+  .icon { display: inline-block; vertical-align: middle; flex-shrink: 0; }
+  .label .icon { width: 18px; height: 18px; }
+  .bday-big .icon { width: clamp(40px, 10vw, 90px); height: clamp(40px, 10vw, 90px); }
+  .bday-sub .icon { width: 22px; height: 22px; }
+  .date-badge .icon { width: 16px; height: 16px; }
+  footer .icon { width: 14px; height: 14px; }
+</style>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+
+<canvas id="canvas"></canvas>
+<canvas id="confetti"></canvas>
+
+<main>
+  <div class="label">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="g-cake" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#ff3cac"/>
+          <stop offset="100%" stop-color="#00f5d4"/>
+        </linearGradient>
+      </defs>
+      <path fill="url(#g-cake)" d="M8 6.5C8 5.12 9.12 4 10.5 4S13 5.12 13 6.5V7H8V6.5ZM3 9a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v3a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V9Zm1 7h16v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3Z"/>
+      <rect fill="url(#g-cake)" x="6" y="1" width="2" height="4" rx="1"/>
+      <rect fill="url(#g-cake)" x="11" y="1" width="2" height="4" rx="1"/>
+      <rect fill="url(#g-cake)" x="16" y="1" width="2" height="4" rx="1"/>
+    </svg>
+    Birthday Countdown
+  </div>
+
+  <div class="name-wrap">
+    <div class="name-main">Kayoko</div>
+    <div class="name-sub">simonov41coder · The Birthday Drop</div>
+  </div>
+
+  <!-- Countdown phase -->
+  <div id="phase-countdown">
+    <div class="countdown-grid">
+      <div class="cd-box"><div class="cd-num" id="cd-d">00</div><div class="cd-lbl">Days</div></div>
+      <div class="cd-box"><div class="cd-num" id="cd-h">00</div><div class="cd-lbl">Hours</div></div>
+      <div class="cd-box"><div class="cd-num" id="cd-m">00</div><div class="cd-lbl">Minutes</div></div>
+      <div class="cd-box"><div class="cd-num" id="cd-s">00</div><div class="cd-lbl">Seconds</div></div>
+    </div>
+  </div>
+
+  <!-- Birthday phase -->
+  <div id="phase-birthday">
+    <div class="bday-msg">
+      <div class="bday-big">
+        <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="g-party" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#ffe600"/>
+              <stop offset="50%" stop-color="#ff3cac"/>
+              <stop offset="100%" stop-color="#7b2fff"/>
+            </linearGradient>
+          </defs>
+          <path fill="url(#g-party)" d="M1.5 21.5 10 13l1.5 1.5-8.5 8.5H1.5ZM10 13l3-3 1 3-3 1-1-1ZM13 10l2-5 2 2-5 2 1 1ZM15 5l1-3 3 1-1 3-3-1ZM18 8l3-1 1 3-3 1-1-3ZM20 12l1 3-3-1 1-3 1 1ZM17 15l-1 3-2-2 2-2 1 1ZM6 8l2-1 1 2-2 1-1-2ZM9 6l1-2 2 1-1 2-2-1Z"/>
+        </svg>
+        Happy Birthday!
+        <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <use href="#g-party-use"/>
+          <defs><linearGradient id="g-party2" x1="1" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#00f5d4"/><stop offset="100%" stop-color="#ff3cac"/></linearGradient></defs>
+          <path fill="url(#g-party2)" d="M1.5 21.5 10 13l1.5 1.5-8.5 8.5H1.5ZM10 13l3-3 1 3-3 1-1-1ZM13 10l2-5 2 2-5 2 1 1ZM15 5l1-3 3 1-1 3-3-1ZM18 8l3-1 1 3-3 1-1-3ZM20 12l1 3-3-1 1-3 1 1ZM17 15l-1 3-2-2 2-2 1 1ZM6 8l2-1 1 2-2 1-1-2ZM9 6l1-2 2 1-1 2-2-1Z"/>
+        </svg>
+      </div>
+      <div class="bday-sub">
+        Another year of shipping code, playing War Thunder,<br>
+        and building things that slap. You're built different, fr.
+        <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="margin-left:4px">
+          <defs><linearGradient id="g-fire" x1="0" y1="1" x2="1" y2="0"><stop offset="0%" stop-color="#ffe600"/><stop offset="60%" stop-color="#ff3cac"/><stop offset="100%" stop-color="#7b2fff"/></linearGradient></defs>
+          <path fill="url(#g-fire)" d="M12 2c0 0-1 4-4 6 0 0 1-5-3-6 0 0-2 6 1 10-1-1-2-3-2-3s-1 7 4 9c-1-1-1-3-1-3s3 3 7 1c3-2 4-6 2-9 0 0-1 2-2 2 2-3 1-7-2-7Z"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="date-badge">
+    <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="g-cal" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#ff3cac"/><stop offset="100%" stop-color="#00f5d4"/></linearGradient></defs>
+      <rect fill="url(#g-cal)" x="3" y="4" width="18" height="18" rx="3"/>
+      <rect fill="#06040f" x="5" y="9" width="14" height="11" rx="1"/>
+      <rect fill="url(#g-cal)" x="8" y="2" width="2" height="4" rx="1"/>
+      <rect fill="url(#g-cal)" x="14" y="2" width="2" height="4" rx="1"/>
+      <rect fill="url(#g-cal)" x="7" y="13" width="2" height="2" rx="0.5"/>
+      <rect fill="url(#g-cal)" x="11" y="13" width="2" height="2" rx="0.5"/>
+      <rect fill="url(#g-cal)" x="15" y="13" width="2" height="2" rx="0.5"/>
+      <rect fill="url(#g-cal)" x="7" y="17" width="2" height="2" rx="0.5"/>
+      <rect fill="url(#g-cal)" x="11" y="17" width="2" height="2" rx="0.5"/>
+    </svg>
+    <span>April 15, 2026</span> · WIB (UTC+7)
+  </div>
+</main>
+
+<footer>made with <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle"><defs><linearGradient id="g-heart" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#ff3cac"/><stop offset="100%" stop-color="#7b2fff"/></linearGradient></defs><path fill="url(#g-heart)" d="M12 21C12 21 3 14 3 8a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 6-9 13-9 13Z"/></svg> for kayoko</footer>
+
+<script>
+// ── Star particles ───────────────────────────────────────────────────────
+const cv  = document.getElementById('canvas');
+const ctx = cv.getContext('2d');
+let stars = [];
+function resizeCv() { cv.width = innerWidth; cv.height = innerHeight; }
+resizeCv(); window.addEventListener('resize', resizeCv);
+
+for (let i = 0; i < 140; i++) stars.push({
+  x: Math.random() * innerWidth,
+  y: Math.random() * innerHeight,
+  r: Math.random() * 1.4 + 0.2,
+  a: Math.random(),
+  da: (Math.random() - 0.5) * 0.008,
+  dx: (Math.random() - 0.5) * 0.15,
+  dy: (Math.random() - 0.5) * 0.12,
+});
+
+function animStars() {
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  for (const s of stars) {
+    s.a = Math.max(0.05, Math.min(1, s.a + s.da));
+    if (s.a <= 0.05 || s.a >= 1) s.da *= -1;
+    s.x = (s.x + s.dx + cv.width)  % cv.width;
+    s.y = (s.y + s.dy + cv.height) % cv.height;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(200,190,255,${s.a})`;
+    ctx.fill();
+  }
+  requestAnimationFrame(animStars);
+}
+animStars();
+
+// ── Countdown ────────────────────────────────────────────────────────────
+// Target: April 15, 2026 00:00:00 WIB (UTC+7) = 2026-04-14T17:00:00Z
+const target = new Date('2026-04-14T17:00:00Z').getTime();
+
+const pad = n => String(n).padStart(2, '0');
+
+function tick() {
+  const diff = target - Date.now();
+  if (diff <= 0) {
+    activateBirthday();
+    return;
+  }
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  document.getElementById('cd-d').textContent = pad(d);
+  document.getElementById('cd-h').textContent = pad(h);
+  document.getElementById('cd-m').textContent = pad(m);
+  document.getElementById('cd-s').textContent = pad(s);
+  setTimeout(tick, 1000);
+}
+tick();
+
+// ── Birthday mode ────────────────────────────────────────────────────────
+function activateBirthday() {
+  document.getElementById('phase-countdown').style.display = 'none';
+  const bp = document.getElementById('phase-birthday');
+  bp.style.display = 'block';
+  bp.style.animation = 'fadeUp 1s ease forwards';
+  bp.style.opacity   = '0';
+  setTimeout(() => bp.style.opacity = '1', 50);
+
+  // Confetti
+  const cc = document.getElementById('confetti');
+  cc.style.display = 'block';
+  cc.width = innerWidth; cc.height = innerHeight;
+  const cx = cc.getContext('2d');
+  const pieces = Array.from({length: 180}, () => ({
+    x: Math.random() * cc.width,
+    y: Math.random() * -200,
+    w: Math.random() * 10 + 4,
+    h: Math.random() * 5 + 3,
+    color: ['#ff3cac','#ffe600','#00f5d4','#7b2fff','#ff6b6b'][Math.floor(Math.random()*5)],
+    rot: Math.random() * Math.PI,
+    drot: (Math.random()-0.5)*0.1,
+    dy: Math.random() * 3 + 1.5,
+    dx: (Math.random()-0.5) * 1.5,
+  }));
+  function dropConfetti() {
+    cx.clearRect(0,0,cc.width,cc.height);
+    for (const p of pieces) {
+      p.y += p.dy; p.x += p.dx; p.rot += p.drot;
+      if (p.y > cc.height) { p.y = -10; p.x = Math.random()*cc.width; }
+      cx.save();
+      cx.translate(p.x, p.y);
+      cx.rotate(p.rot);
+      cx.fillStyle = p.color;
+      cx.globalAlpha = 0.85;
+      cx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+      cx.restore();
+    }
+    requestAnimationFrame(dropConfetti);
+  }
+  dropConfetti();
+}
+</script>
+</body>
+</html>
